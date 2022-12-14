@@ -8,7 +8,7 @@ import requests
 import telegram
 from dotenv import load_dotenv
 
-from exception import TokensError, SendMessageError, GetApiAnswerError
+from exception import SendMessageError, GetApiAnswerError, UnavailableEndpoint
 
 load_dotenv()
 
@@ -55,31 +55,23 @@ def send_message(bot, message):
         raise SendMessageError(text)
 
 
-
 def get_api_answer(timestamp):
     """Делаем запрос к эндпойнту."""
     try:
         payload = {'from_date': timestamp}
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
-    except Exception as error:
-        raise GetApiAnswerError(f'ошибка получения запроса {error}')
-    else:
-        if response.status_code == HTTPStatus.OK:
-            logger.info(f'успешное получение {ENDPOINT}')
-            homework = response.json()
-            if 'error' in homework:
-                raise SystemError(f'Ошибка json, {homework["error"]}')
-            elif 'code' in homework:
-                raise SystemError(f'Ошибка json, {homework["code"]}')
-            else:
-                return homework
-        elif response.status_code == HTTPStatus.REQUEST_TIMEOUT:
-            raise SystemError(f'Ошибка код {response.status_code}')
-        elif response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            raise SystemError(f'Ошибка код {response.status_code}')
-        else:
-            raise SystemError(
-                f'Недоступен Эндпоинт, код {response.status_code}')
+        logger.debug('Запрос к Эндпойнту')
+        if response.status_code != HTTPStatus.OK:
+            text = f'Код запроса не 200 и равен {response.status_code}'
+            raise GetApiAnswerError(text)
+    except requests.exceptions.RequestException as error:
+        text = f'Эндпойнт недоступен. Ошибка: {error}'
+        raise UnavailableEndpoint(text)
+    try:
+        response_content = response.json()
+    except ValueError:
+        raise
+    return response_content
 
 
 def check_response(response):
@@ -137,6 +129,8 @@ def main():
                     send_message(bot, homework_status)
             else:
                 logger.debug('Новый статус не обнаружен')
+        except SendMessageError as error:
+            logger.error(error)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             if message != last_message:

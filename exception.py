@@ -17,3 +17,7 @@ class GetApiAnswerError(Exception):
 class HomeworksKeyError(Exception):
     """Ошибка ключа homeworks"""
     pass
+
+class UnavailableEndpoint(Exception):
+    """Ошибка Эндпойнта"""
+    pass
