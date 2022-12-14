@@ -41,19 +41,19 @@ def check_tokens():
     """Проверяем доступность переменных окружения."""
     variables = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
     if all(variables):
-        return True
-    return False
+        return all(variables)
 
 
 def send_message(bot, message):
     """Отправляем сообщение в телеграм чат."""
     try:
-        bot.send_message(bot, message)
+        bot.send_message(TELEGRAM_CHAT_ID, message)
         logger.debug(f'send message {message}')
-    except Exception as error:
+    except telegram.error.TelegramError as error:
         text = f'Ошибка отправки сообщения, {error}'
         logger.error(text)
         raise SendMessageError(text)
+
 
 
 def get_api_answer(timestamp):
@@ -103,7 +103,6 @@ def parse_status(homework):
     homework_name = homework.get('homework_name')
     if homework_name is None:
         text = 'В ответе API нет ключа homework_name'
-        logger.error(text)
         raise KeyError(text)
     homework_status = homework.get('status')
     if homework_status is None:
@@ -124,7 +123,7 @@ def main():
     if not check_tokens():
         text = 'Переменные окружения недоступны'
         logger.critical(text)
-        raise TokensError(text)
+        sys.exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time()) - RETRY_PERIOD
 
@@ -140,10 +139,10 @@ def main():
                 logger.debug('Новый статус не обнаружен')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            logger.error(message)
             if message != last_message:
                 send_message(bot, message)
                 last_message = message
+            logger.error(message)
         finally:
             timestamp = int(time.time())
             time.sleep(RETRY_PERIOD)
