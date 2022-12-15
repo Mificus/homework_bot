@@ -8,7 +8,8 @@ import requests
 import telegram
 from dotenv import load_dotenv
 
-from exception import SendMessageError, GetApiAnswerError, UnavailableEndpoint
+from exception import SendMessageError, GetApiAnswerError
+from exception import UnavailableEndpoint, ResponseDateError
 
 load_dotenv()
 
@@ -40,8 +41,7 @@ handler.setFormatter(formatter)
 def check_tokens():
     """Проверяем доступность переменных окружения."""
     variables = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
-    if all(variables):
-        return all(variables)
+    return all(variables)
 
 
 def send_message(bot, message):
@@ -70,7 +70,7 @@ def get_api_answer(timestamp):
     try:
         response_content = response.json()
     except ValueError:
-        raise
+        raise ResponseDateError
     return response_content
 
 
